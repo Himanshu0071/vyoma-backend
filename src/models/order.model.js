@@ -33,6 +33,20 @@ const orderSchema =
           },
         },
       ],
+      
+      shippingAddress: {
+  fullName: String,
+  phone: String,
+  email: String,
+
+  country: String,
+  state: String,
+  city: String,
+  pincode: String,
+
+  address: String,
+  landmark: String,
+},
 
       totalPrice: {
         type: Number,
