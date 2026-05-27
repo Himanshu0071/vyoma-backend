@@ -1,64 +1,74 @@
 import mongoose from "mongoose";
 
-const orderSchema = new mongoose.Schema(
-  {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+const orderSchema =
+  new mongoose.Schema(
+    {
+      user: {
+        type:
+          mongoose.Schema.Types
+            .ObjectId,
 
-    items: [
-      {
-        productId: String,
+        ref: "User",
 
-        title: String,
-
-        image: String,
-
-        price: Number,
-
-        quantity: Number,
+        required: true,
       },
-    ],
 
-    shippingAddress: {
-      fullName: String,
+      orderItems: [
+        {
+          title: String,
 
-      phone: String,
+          quantity: Number,
 
-      address: String,
+          image: String,
 
-      city: String,
+          price: Number,
 
-      postalCode: String,
+          product: {
+            type:
+              mongoose.Schema
+                .Types
+                .ObjectId,
 
-      country: String,
+            ref: "Product",
+          },
+        },
+      ],
+
+      totalPrice: {
+        type: Number,
+
+        required: true,
+      },
+
+      isPaid: {
+        type: Boolean,
+
+        default: false,
+      },
+      isDelivered: {
+        type: Boolean,
+
+        default: false,
+      },
+
+      deliveredAt: Date,
+      paidAt: Date,
+
+      razorpayOrderId:
+        String,
+
+      razorpayPaymentId:
+        String,
     },
+    {
+      timestamps: true,
+    }
+  );
 
-    totalPrice: {
-      type: Number,
-      required: true,
-    },
-
-    paymentStatus: {
-      type: String,
-      default: "Pending",
-    },
-
-    orderStatus: {
-      type: String,
-      default: "Processing",
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
-
-const Order = mongoose.model(
-  "Order",
-  orderSchema
-);
+const Order =
+  mongoose.model(
+    "Order",
+    orderSchema
+  );
 
 export default Order;

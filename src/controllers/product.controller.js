@@ -1,10 +1,55 @@
 import Product from "../models/product.model.js";
 
-export const getProducts = async (req, res) => {
+export const getProducts = async (
+  req,
+  res
+) => {
   try {
-    const products = await Product.find();
+    const {
+      keyword,
+      category,
+      sort,
+    } = req.query;
 
-    res.status(200).json(products);
+    let query = {};
+
+    /* SEARCH */
+    if (keyword) {
+      query.title = {
+        $regex: keyword,
+        $options: "i",
+      };
+    }
+
+    /* CATEGORY */
+    if (category) {
+      query.category = category;
+    }
+
+    let products =
+      Product.find(query);
+
+    /* SORTING */
+    if (sort === "low") {
+      products =
+        products.sort({
+          price: 1,
+        });
+    }
+
+    if (sort === "high") {
+      products =
+        products.sort({
+          price: -1,
+        });
+    }
+
+    const finalProducts =
+      await products;
+
+    res.status(200).json(
+      finalProducts
+    );
   } catch (error) {
     res.status(500).json({
       message: error.message,
