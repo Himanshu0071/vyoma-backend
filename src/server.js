@@ -8,6 +8,8 @@ import orderRoutes from "./routes/order.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import addressRoutes from "./routes/address.routes.js";
+import userRoutes from "./routes/user.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 dotenv.config();
 
@@ -33,6 +35,8 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/address", addressRoutes);
+app.use("/api/users",userRoutes);
+app.use("/api/admin",adminRoutes);
 
 /* Server */
 const PORT = process.env.PORT || 8000;
