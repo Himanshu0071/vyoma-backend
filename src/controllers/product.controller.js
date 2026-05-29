@@ -1,5 +1,6 @@
 import Product from "../models/product.model.js";
-
+import cloudinary from "../config/cloudinary.js";
+import streamifier from "streamifier";
 // export const getProducts = async (
 //   req,
 //   res
@@ -156,19 +157,214 @@ export const getSingleProduct = async (
   }
 };
 
+// export const createProduct = async (
+//   req,
+//   res
+// ) => {
+//   try {
+//     let uploadedImages = [];
+
+//     if (
+//       req.files &&
+//       req.files.length > 0
+//     ) {
+//       uploadedImages =
+//         await Promise.all(
+//           req.files.map(
+//             (file) =>
+//               new Promise(
+//                 (
+//                   resolve,
+//                   reject
+//                 ) => {
+//                   const stream =
+//                     cloudinary.uploader.upload_stream(
+//                       {
+//                         folder:
+//                           "vyoma-products",
+//                       },
+//                       (
+//                         error,
+//                         result
+//                       ) => {
+//                         if (
+//                           error
+//                         ) {
+//                           reject(
+//                             error
+//                           );
+//                         } else {
+//                           resolve(
+//                             result.secure_url
+//                           );
+//                         }
+//                       }
+//                     );
+
+//                   streamifier
+//                     .createReadStream(
+//                       file.buffer
+//                     )
+//                     .pipe(stream);
+//                 }
+//               )
+//           )
+//         );
+//     }
+
+//     const product =
+//       await Product.create({
+//         ...req.body,
+
+//         images:
+//           uploadedImages,
+//       });
+
+//     res.status(201).json(
+//       product
+//     );
+//   } catch (error) {
+//     console.error(error);
+
+//     res.status(500).json({
+//       message:
+//         error.message,
+//     });
+//   }
+// };
+
 export const createProduct = async (
   req,
   res
 ) => {
   try {
-    const product = await Product.create(
-      req.body
+    const sizes =
+      req.body.sizes
+        ? JSON.parse(
+            req.body.sizes
+          )
+        : [];
+
+    const variants =
+      req.body.variants
+        ? JSON.parse(
+            req.body.variants
+          )
+        : [];
+
+    /* =========================
+       UPLOAD VARIANT IMAGES
+    ========================= */
+
+    for (
+      let i = 0;
+      i < variants.length;
+      i++
+    ) {
+      const variantFiles =
+        req.files?.filter(
+          (file) =>
+            file.fieldname ===
+            `variantImages_${i}`
+        ) || [];
+
+      const uploadedImages =
+        await Promise.all(
+          variantFiles.map(
+            (file) =>
+              new Promise(
+                (
+                  resolve,
+                  reject
+                ) => {
+                  const stream =
+                    cloudinary.uploader.upload_stream(
+                      {
+                        folder:
+                          "vyoma-products",
+                      },
+                      (
+                        error,
+                        result
+                      ) => {
+                        if (
+                          error
+                        ) {
+                          reject(
+                            error
+                          );
+                        } else {
+                          resolve(
+                            result.secure_url
+                          );
+                        }
+                      }
+                    );
+
+                  streamifier
+                    .createReadStream(
+                      file.buffer
+                    )
+                    .pipe(stream);
+                }
+              )
+          )
+        );
+
+      variants[i].images =
+        uploadedImages;
+    }
+
+    console.log(
+      "FINAL VARIANTS:",
+      variants
     );
 
-    res.status(201).json(product);
+    const product =
+      await Product.create({
+        title:
+          req.body.title,
+
+        description:
+          req.body.description,
+
+        price:
+          Number(
+            req.body.price
+          ),
+
+        category:
+          req.body.category,
+
+        brand:
+          req.body.brand,
+
+        gender:
+          req.body.gender,
+
+        discount:
+          Number(
+            req.body.discount
+          ),
+
+        featured:
+          req.body.featured ===
+          "true",
+
+        sizes,
+
+        variants,
+      });
+
+    res.status(201).json(
+      product
+    );
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
-      message: error.message,
+      message:
+        error.message,
     });
   }
 };

@@ -1,4 +1,5 @@
 import express from "express";
+import upload from "../middleware/upload.middleware.js";
 
 import {
   createProduct,
@@ -12,6 +13,10 @@ router.get("/", getProducts);
 
 router.get("/:id", getSingleProduct);
 
-router.post("/", createProduct);
+router.post(
+  "/",
+  upload.any(),
+  createProduct
+);
 
 export default router;

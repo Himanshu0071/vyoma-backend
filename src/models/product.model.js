@@ -1,11 +1,44 @@
 import mongoose from "mongoose";
 
+/* =========================
+   VARIANT SCHEMA
+========================= */
+
+const variantSchema =
+  new mongoose.Schema(
+    {
+      color: {
+        type: String,
+        required: true,
+      },
+
+      images: [
+        {
+          type: String,
+        },
+      ],
+
+      stock: {
+        type: Number,
+        default: 0,
+      },
+    },
+    {
+      _id: false,
+    }
+  );
+
+/* =========================
+   PRODUCT SCHEMA
+========================= */
+
 const productSchema =
   new mongoose.Schema(
     {
       title: {
         type: String,
         required: true,
+        trim: true,
       },
 
       description: {
@@ -24,29 +57,10 @@ const productSchema =
         lowercase: true,
       },
 
-      images: [
-        {
-          type: String,
-        },
-      ],
-
-      /* NEW FIELDS */
-
       brand: {
         type: String,
         default: "",
       },
-
-      stock: {
-        type: Number,
-        default: 0,
-      },
-
-      sizes: [
-        {
-          type: String,
-        },
-      ],
 
       gender: {
         type: String,
@@ -55,10 +69,14 @@ const productSchema =
           "women",
           "unisex",
         ],
-
-        default:
-          "unisex",
+        default: "unisex",
       },
+
+      sizes: [
+        {
+          type: String,
+        },
+      ],
 
       discount: {
         type: Number,
@@ -69,8 +87,15 @@ const productSchema =
         type: Boolean,
         default: false,
       },
-    },
 
+      /* =========================
+         COLOR VARIANTS
+      ========================= */
+
+      variants: [
+        variantSchema,
+      ],
+    },
     {
       timestamps: true,
     }
