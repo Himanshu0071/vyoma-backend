@@ -1,7 +1,9 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
+
 import connectDB from "./config/db.js";
+
 import productRoutes from "./routes/product.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import orderRoutes from "./routes/order.routes.js";
@@ -20,26 +22,94 @@ const app = express();
 /* Middleware */
 app.use(express.json());
 
-app.use(cors());
+/* =========================
+   CORS
+========================= */
+
+const allowedOrigins =
+  process.env.CLIENT_URL
+    ?.split(",")
+    .map((url) => url.trim()) || [];
+
+app.use(
+  cors({
+    origin: (
+      origin,
+      callback
+    ) => {
+      if (
+        !origin ||
+        allowedOrigins.includes(
+          origin
+        )
+      ) {
+        return callback(
+          null,
+          true
+        );
+      }
+
+      callback(
+        new Error(
+          "Not allowed by CORS"
+        )
+      );
+    },
+
+    credentials: true,
+  })
+);
 
 /* Routes */
 app.get("/", (req, res) => {
-  res.send("Vyoma API Running...");
+  res.send(
+    "Vyoma API Running..."
+  );
 });
 
-app.use("/api/products", productRoutes);
+app.use(
+  "/api/products",
+  productRoutes
+);
 
-app.use("/api/auth", authRoutes);
+app.use(
+  "/api/auth",
+  authRoutes
+);
 
-app.use("/api/orders", orderRoutes);
-app.use("/api/upload", uploadRoutes);
-app.use("/api/payment", paymentRoutes);
-app.use("/api/address", addressRoutes);
-app.use("/api/users",userRoutes);
-app.use("/api/admin",adminRoutes);
+app.use(
+  "/api/orders",
+  orderRoutes
+);
+
+app.use(
+  "/api/upload",
+  uploadRoutes
+);
+
+app.use(
+  "/api/payment",
+  paymentRoutes
+);
+
+app.use(
+  "/api/address",
+  addressRoutes
+);
+
+app.use(
+  "/api/users",
+  userRoutes
+);
+
+app.use(
+  "/api/admin",
+  adminRoutes
+);
 
 /* Server */
-const PORT = process.env.PORT || 8000;
+const PORT =
+  process.env.PORT || 8000;
 
 app.listen(PORT, () => {
   console.log(
