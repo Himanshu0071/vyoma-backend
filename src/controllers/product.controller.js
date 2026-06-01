@@ -1,62 +1,58 @@
 import Product from "../models/product.model.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
-// export const getProducts = async (
-//   req,
-//   res
-// ) => {
-//   try {
-//     const {
-//       keyword,
-//       category,
-//       sort,
-//     } = req.query;
 
-//     let query = {};
+const parseCoupons = (raw) => {
+  if (!raw) return [];
 
-//     /* SEARCH */
-//     if (keyword) {
-//       query.title = {
-//         $regex: keyword,
-//         $options: "i",
-//       };
-//     }
+  try {
+    const parsed =
+      typeof raw === "string"
+        ? JSON.parse(raw)
+        : raw;
 
-//     /* CATEGORY */
-//     if (category) {
-//       query.category = category;
-//     }
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
 
-//     let products =
-//       Product.find(query);
-
-//     /* SORTING */
-//     if (sort === "low") {
-//       products =
-//         products.sort({
-//           price: 1,
-//         });
-//     }
-
-//     if (sort === "high") {
-//       products =
-//         products.sort({
-//           price: -1,
-//         });
-//     }
-
-//     const finalProducts =
-//       await products;
-
-//     res.status(200).json(
-//       finalProducts
-//     );
-//   } catch (error) {
-//     res.status(500).json({
-//       message: error.message,
-//     });
-//   }
-// };
+    return parsed
+      .filter(
+        (coupon) =>
+          coupon?.code &&
+          coupon?.discountValue !==
+            undefined
+      )
+      .map((coupon) => ({
+        code: String(coupon.code)
+          .trim()
+          .toUpperCase(),
+        title: coupon.title || "",
+        discountType:
+          coupon.discountType ===
+          "flat"
+            ? "flat"
+            : "percentage",
+        discountValue: Number(
+          coupon.discountValue
+        ),
+        maxDiscount: Number(
+          coupon.maxDiscount || 0
+        ),
+        minOrderValue: Number(
+          coupon.minOrderValue || 0
+        ),
+        description:
+          coupon.description || "",
+        termsAndConditions:
+          coupon.termsAndConditions ||
+          "",
+        isActive:
+          coupon.isActive !== false,
+      }));
+  } catch {
+    return [];
+  }
+};
 
 export const getProducts =
   async (req, res) => {
@@ -68,7 +64,11 @@ export const getProducts =
         collection,
       } = req.query;
 
-      let query = {};
+      let query = {
+        isActive: {
+          $ne: false,
+        },
+      };
 
       /* SEARCH */
       if (keyword) {
@@ -241,15 +241,15 @@ export const createProduct = async (
     const sizes =
       req.body.sizes
         ? JSON.parse(
-            req.body.sizes
-          )
+          req.body.sizes
+        )
         : [];
 
     const variants =
       req.body.variants
         ? JSON.parse(
-            req.body.variants
-          )
+          req.body.variants
+        )
         : [];
 
     /* =========================
@@ -320,6 +320,10 @@ export const createProduct = async (
       variants
     );
 
+    const coupons = parseCoupons(
+      req.body.coupons
+    );
+
     const product =
       await Product.create({
         title:
@@ -327,6 +331,10 @@ export const createProduct = async (
 
         description:
           req.body.description,
+
+        mrp: Number(
+          req.body.mrp || 0
+        ),
 
         price:
           Number(
@@ -354,6 +362,8 @@ export const createProduct = async (
         sizes,
 
         variants,
+
+        coupons,
       });
 
     res.status(201).json(
@@ -368,3 +378,217 @@ export const createProduct = async (
     });
   }
 };
+
+export const deleteProduct = async (
+  req,
+  res
+) => {
+  try {
+    const product =
+      await Product.findByIdAndUpdate(
+        req.params.id,
+        {
+          isActive: false,
+        },
+        {
+          new: true,
+        }
+      );
+
+    res.status(200).json({
+      message:
+        "Product archived",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message:
+        error.message,
+    });
+  }
+};
+
+export const updateProduct = async (
+  req,
+  res
+) => {
+  try {
+    const sizes =
+      req.body.sizes
+        ? JSON.parse(
+          req.body.sizes
+        )
+        : [];
+
+    const variants =
+      req.body.variants
+        ? JSON.parse(
+          req.body.variants
+        )
+        : [];
+
+    for (
+      let i = 0;
+      i < variants.length;
+      i++
+    ) {
+      const existingImages = (
+        Array.isArray(variants[i].images)
+          ? variants[i].images
+          : []
+      ).filter(
+        (img) =>
+          typeof img ===
+          "string" &&
+          img.length > 0
+      );
+
+      const variantFiles =
+        req.files?.filter(
+          (file) =>
+            file.fieldname ===
+            `variantImages_${i}`
+        ) || [];
+
+      if (
+        variantFiles.length > 0
+      ) {
+        const uploadedImages =
+          await Promise.all(
+            variantFiles.map(
+              (file) =>
+                new Promise(
+                  (
+                    resolve,
+                    reject
+                  ) => {
+                    const stream =
+                      cloudinary.uploader.upload_stream(
+                        {
+                          folder:
+                            "vyoma-products",
+                        },
+                        (
+                          error,
+                          result
+                        ) => {
+                          if (
+                            error
+                          ) {
+                            reject(
+                              error
+                            );
+                          } else {
+                            resolve(
+                              result.secure_url
+                            );
+                          }
+                        }
+                      );
+
+                    streamifier
+                      .createReadStream(
+                        file.buffer
+                      )
+                      .pipe(stream);
+                  }
+                )
+            )
+          );
+
+        variants[i].images = [
+          ...existingImages,
+          ...uploadedImages,
+        ];
+      } else {
+        variants[i].images =
+          existingImages;
+      }
+    }
+
+    const coupons = parseCoupons(
+      req.body.coupons
+    );
+
+    const product =
+      await Product.findByIdAndUpdate(
+        req.params.id,
+        {
+          title:
+            req.body.title,
+
+          description:
+            req.body.description,
+
+          mrp: Number(
+            req.body.mrp || 0
+          ),
+
+          price:
+            Number(
+              req.body.price
+            ),
+
+          category:
+            req.body.category,
+
+          brand:
+            req.body.brand,
+
+          gender:
+            req.body.gender,
+
+          discount:
+            Number(
+              req.body.discount
+            ),
+
+          featured:
+            req.body.featured ===
+            "true",
+
+          sizes,
+
+          variants,
+
+          coupons,
+        },
+        {
+          new: true,
+        }
+      );
+
+    if (!product) {
+      return res.status(404).json({
+        message:
+          "Product not found",
+      });
+    }
+
+    res.status(200).json(
+      product
+    );
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      message:
+        error.message,
+    });
+  }
+};
+
+export const restoreProduct =
+  async (req, res) => {
+    const product =
+      await Product.findByIdAndUpdate(
+        req.params.id,
+        {
+          isActive: true,
+        },
+        {
+          new: true,
+        }
+      );
+
+    res.json(product);
+  };

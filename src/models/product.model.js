@@ -4,6 +4,64 @@ import mongoose from "mongoose";
    VARIANT SCHEMA
 ========================= */
 
+const couponSchema =
+  new mongoose.Schema(
+    {
+      code: {
+        type: String,
+        required: true,
+        trim: true,
+        uppercase: true,
+      },
+
+      title: {
+        type: String,
+        default: "",
+        trim: true,
+      },
+
+      discountType: {
+        type: String,
+        enum: ["percentage", "flat"],
+        default: "percentage",
+      },
+
+      discountValue: {
+        type: Number,
+        required: true,
+        min: 0,
+      },
+
+      maxDiscount: {
+        type: Number,
+        default: 0,
+      },
+
+      minOrderValue: {
+        type: Number,
+        default: 0,
+      },
+
+      description: {
+        type: String,
+        default: "",
+      },
+
+      termsAndConditions: {
+        type: String,
+        default: "",
+      },
+
+      isActive: {
+        type: Boolean,
+        default: true,
+      },
+    },
+    {
+      timestamps: false,
+    }
+  );
+
 const variantSchema =
   new mongoose.Schema(
     {
@@ -44,6 +102,11 @@ const productSchema =
       description: {
         type: String,
         required: true,
+      },
+
+      mrp: {
+        type: Number,
+        default: 0,
       },
 
       price: {
@@ -87,6 +150,10 @@ const productSchema =
         type: Boolean,
         default: false,
       },
+      isActive: {
+  type: Boolean,
+  default: true,
+},
 
       /* =========================
          COLOR VARIANTS
@@ -94,6 +161,10 @@ const productSchema =
 
       variants: [
         variantSchema,
+      ],
+
+      coupons: [
+        couponSchema,
       ],
     },
     {
