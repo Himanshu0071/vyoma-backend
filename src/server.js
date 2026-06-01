@@ -31,34 +31,36 @@ const allowedOrigins =
     ?.split(",")
     .map((url) => url.trim()) || [];
 
-app.use(
-  cors({
-    origin: (
-      origin,
-      callback
-    ) => {
-      if (
-        !origin ||
-        allowedOrigins.includes(
-          origin
-        )
-      ) {
-        return callback(
-          null,
-          true
-        );
-      }
+// app.use(
+//   cors({
+//     origin: (
+//       origin,
+//       callback
+//     ) => {
+//       if (
+//         !origin ||
+//         allowedOrigins.includes(
+//           origin
+//         )
+//       ) {
+//         return callback(
+//           null,
+//           true
+//         );
+//       }
 
-      callback(
-        new Error(
-          "Not allowed by CORS"
-        )
-      );
-    },
+//       callback(
+//         new Error(
+//           "Not allowed by CORS"
+//         )
+//       );
+//     },
 
-    credentials: true,
-  })
-);
+//     credentials: true,
+//   })
+// );
+
+app.use(cors());
 
 /* Routes */
 app.get("/", (req, res) => {
