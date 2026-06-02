@@ -9,11 +9,35 @@ export const registerUser = async (
   res
 ) => {
   try {
-    const { name, email, password } =
+    const { name, email, password, phone } =
       req.body;
 
+    if (!name || !email || !password || !phone) {
+      return res.status(400).json({
+        message: "All fields are required",
+      });
+    }
+
+    const normalizedPhone =
+      String(phone).trim();
+
+    const phoneRegex =
+      /^[0-9]{10,15}$/;
+
+    if (!phoneRegex.test(normalizedPhone)) {
+      return res.status(400).json({
+        message:
+          "Invalid mobile number",
+      });
+    }
+
     const existingUser =
-      await User.findOne({ email });
+      await User.findOne({
+        $or: [
+          { email },
+          { phone: normalizedPhone },
+        ],
+      });
 
     if (existingUser) {
       return res.status(400).json({
@@ -27,6 +51,7 @@ export const registerUser = async (
 
     const user = await User.create({
       name,
+      phone: normalizedPhone,
       email,
       password: hashedPassword,
     });
@@ -47,6 +72,7 @@ export const registerUser = async (
       user: {
         id: user._id,
         name: user.name,
+        phone: user.phone,
         email: user.email,
         role: user.role,
       },
@@ -105,6 +131,7 @@ export const loginUser = async (
       user: {
         id: user._id,
         name: user.name,
+        phone: user.phone,
         email: user.email,
         role: user.role,
       },
