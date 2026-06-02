@@ -12,6 +12,8 @@ import paymentRoutes from "./routes/payment.routes.js";
 import addressRoutes from "./routes/address.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import notifyRoutes from "./routes/notify.routes.js";
+import adminNotifyRoutes from "./routes/adminNotify.routes.js";
 
 dotenv.config();
 
@@ -108,6 +110,10 @@ app.use(
   "/api/admin",
   adminRoutes
 );
+
+app.use("/api/notify", notifyRoutes);
+
+app.use("/api/admin/notify-requests", adminNotifyRoutes);
 
 /* Server */
 const PORT =

@@ -1,6 +1,8 @@
 import Product from "../models/product.model.js";
 import cloudinary from "../config/cloudinary.js";
 import streamifier from "streamifier";
+import NotifyRequest from "../models/notifyRequest.model.js";
+import sendBackInStockEmail from "../utils/sendBackInStockEmail.js";
 
 const parseCoupons = (raw) => {
   if (!raw) return [];
@@ -412,6 +414,7 @@ export const updateProduct = async (
   res
 ) => {
   try {
+    const before = await Product.findById(req.params.id).lean();
     const sizes =
       req.body.sizes
         ? JSON.parse(
@@ -567,6 +570,59 @@ export const updateProduct = async (
     res.status(200).json(
       product
     );
+
+    // Fire-and-forget notifications when stock changes 0 -> >0 per color
+    try {
+      if (!before || !product) return;
+
+      const clientUrl = process.env.CLIENT_URL
+        ? String(process.env.CLIENT_URL).split(",")[0].trim()
+        : "";
+
+      const beforeMap = new Map(
+        (before.variants || []).map((v) => [String(v.color), Number(v.stock || 0)])
+      );
+
+      const restockedColors = (product.variants || [])
+        .filter((v) => {
+          const oldStock = beforeMap.get(String(v.color)) ?? 0;
+          const newStock = Number(v.stock || 0);
+          return oldStock <= 0 && newStock > 0;
+        })
+        .map((v) => String(v.color));
+
+      if (restockedColors.length === 0) return;
+
+      const pending = await NotifyRequest.find({
+        productId: product._id,
+        notified: false,
+        variantColor: { $in: restockedColors },
+      });
+
+      if (!pending.length) return;
+
+      await Promise.all(
+        pending.map(async (r) => {
+          const shopUrl = clientUrl
+            ? `${clientUrl}/product/${product._id}`
+            : "";
+
+          await sendBackInStockEmail({
+            email: r.email,
+            name: r.name,
+            productTitle: r.productTitle || product.title,
+            size: r.variantSize,
+            color: r.variantColor,
+            shopUrl,
+          });
+
+          r.notified = true;
+          await r.save();
+        })
+      );
+    } catch (e) {
+      console.log("Back-in-stock notify error:", e?.message || e);
+    }
   } catch (error) {
     console.error(error);
 

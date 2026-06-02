@@ -3,6 +3,7 @@ import User from "../models/user.model.js";
 import Product from "../models/product.model.js";
 
 import Order from "../models/order.model.js";
+import NotifyRequest from "../models/notifyRequest.model.js";
 
 /* =========================
    ADMIN DASHBOARD STATS
@@ -45,12 +46,40 @@ export const getDashboardStats =
           })
           .limit(5);
 
+      /* BACK IN STOCK */
+      const pendingBackInStockRequests =
+        await NotifyRequest.countDocuments({
+          notified: false,
+        });
+
+      const topRequestedProducts =
+        await NotifyRequest.aggregate([
+          { $match: { notified: false } },
+          {
+            $group: {
+              _id: "$productId",
+              productTitle: { $first: "$productTitle" },
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { count: -1 } },
+          { $limit: 5 },
+        ]);
+
       res.status(200).json({
         totalUsers,
         totalProducts,
         totalOrders,
         totalRevenue,
         recentOrders,
+        pendingBackInStockRequests,
+        topRequestedProducts: topRequestedProducts.map(
+          (t) => ({
+            productId: t._id,
+            productTitle: t.productTitle,
+            count: t.count,
+          })
+        ),
       });
     } catch (error) {
       res.status(500).json({
