@@ -4,6 +4,26 @@ import streamifier from "streamifier";
 import NotifyRequest from "../models/notifyRequest.model.js";
 import sendBackInStockEmail from "../utils/sendBackInStockEmail.js";
 
+const SHOP_CATEGORIES = [
+  { title: "Tshirts", slug: "tshirts" },
+  { title: "Shirts", slug: "shirts" },
+  { title: "Vest", slug: "vest" },
+  { title: "Kurta", slug: "kurta" },
+  { title: "Jeans", slug: "jeans" },
+  { title: "Pant", slug: "pant" },
+  { title: "Shoes", slug: "shoes" },
+  { title: "Trousers", slug: "trousers" },
+  { title: "Cargo", slug: "cargo" },
+  { title: "Joggers", slug: "joggers" },
+  { title: "Shorts", slug: "shorts" },
+];
+
+const escapeRegex = (value) =>
+  String(value).replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&"
+  );
+
 const parseCoupons = (raw) => {
   if (!raw) return [];
 
@@ -74,10 +94,39 @@ export const getProducts =
 
       /* SEARCH */
       if (keyword) {
-        query.title = {
-          $regex: keyword,
-          $options: "i",
-        };
+        const safeKeyword = escapeRegex(keyword);
+        query.$or = [
+          {
+            title: {
+              $regex: safeKeyword,
+              $options: "i",
+            },
+          },
+          {
+            category: {
+              $regex: safeKeyword,
+              $options: "i",
+            },
+          },
+          {
+            brand: {
+              $regex: safeKeyword,
+              $options: "i",
+            },
+          },
+          {
+            description: {
+              $regex: safeKeyword,
+              $options: "i",
+            },
+          },
+          {
+            gender: {
+              $regex: safeKeyword,
+              $options: "i",
+            },
+          },
+        ];
       }
 
       /* CATEGORY / COLLECTION */
@@ -136,6 +185,55 @@ export const getProducts =
       });
     }
   };
+
+export const globalSearch = async (req, res) => {
+  try {
+    const q = String(req.query.q || "").trim();
+
+    if (!q) {
+      return res.status(200).json({
+        products: [],
+        categories: [],
+      });
+    }
+
+    const safeQuery = escapeRegex(q);
+    const regex = new RegExp(safeQuery, "i");
+
+    const products = await Product.find({
+      isActive: { $ne: false },
+      $or: [
+        { title: { $regex: safeQuery, $options: "i" } },
+        { category: { $regex: safeQuery, $options: "i" } },
+        { brand: { $regex: safeQuery, $options: "i" } },
+        { description: { $regex: safeQuery, $options: "i" } },
+        { gender: { $regex: safeQuery, $options: "i" } },
+      ],
+    })
+      .select("title category price brand variants")
+      .sort({ createdAt: -1 })
+      .limit(8)
+      .lean();
+
+    const lowerQ = q.toLowerCase();
+    const categories = SHOP_CATEGORIES.filter(
+      (cat) =>
+        cat.slug.includes(lowerQ) ||
+        regex.test(cat.title) ||
+        regex.test(cat.slug)
+    );
+
+    res.status(200).json({
+      products,
+      categories,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
+
 export const getSingleProduct = async (
   req,
   res

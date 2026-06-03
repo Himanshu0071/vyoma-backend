@@ -6,11 +6,14 @@ import {
   deleteProduct,
   getProducts,
   getSingleProduct,
+  globalSearch,
   restoreProduct,
   updateProduct,
 } from "../controllers/product.controller.js";
 
 const router = express.Router();
+
+router.get("/search", globalSearch);
 
 router.get("/", getProducts);
 
